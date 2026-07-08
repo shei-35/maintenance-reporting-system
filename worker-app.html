@@ -264,6 +264,20 @@
 
 </div>
 
-<script>lucide.createIcons();</script>
+
+<script>
+lucide.createIcons();
+
+document.querySelectorAll('.btn-solid').forEach(btn => {
+  btn.addEventListener('click', function() {
+    alert('Task updated successfully!');
+  });
+});
+
+document.querySelector('.complete-btn').addEventListener('click', function() {
+  alert('Repair marked as completed!');
+});
+</script>
+
 </body>
 </html>
