@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartFix — Admin Control Panel</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lucide-static/0.462.0/umd/lucide.min.js"></script>
+<style>
+  :root{
+    --blueprint-navy:#0a2e52;
+    --blueprint-navy-deep:#071f3a;
+    --blueprint-cyan:#4fd7e8;
+    --blueprint-cyan-dim: rgba(79,215,232,0.14);
+    --paper:#f6f4ec;
+    --paper-line:#e1dcc9;
+    --ink:#0a2e52;
+    --ink-soft:#5b6b7d;
+    --critical:#d9483c;
+    --high:#d98f2b;
+    --low:#2f9e5b;
+    --mono: 'IBM Plex Mono', 'Courier New', monospace;
+    --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap');
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:var(--sans);
+    background:var(--paper);
+    color:var(--ink);
+    min-height:100vh;
+  }
+
+  .app{ display:grid; grid-template-columns:236px 1fr; min-height:100vh; }
+
+  /* SIDEBAR */
+  .sidebar{
+    background:
+      repeating-linear-gradient(0deg, rgba(79,215,232,0.05) 0px, transparent 1px, transparent 28px, rgba(79,215,232,0.05) 28px),
+      var(--blueprint-navy-deep);
+    color:#eaf6f8;
+    padding:22px 16px;
+    display:flex;
+    flex-direction:column;
+  }
+  .sidebar .brand{
+    display:flex; align-items:center; gap:10px;
+    padding:6px 8px 22px;
+    border-bottom:1px solid rgba(79,215,232,0.2);
+    margin-bottom:16px;
+  }
+  .sidebar .brand .badge{
+    width:36px; height:36px; border-radius:8px;
+    border:2px solid var(--blueprint-cyan);
+    display:flex; align-items:center; justify-content:center;
+    background:rgba(79,215,232,0.08);
+    flex-shrink:0;
+  }
+  .sidebar .brand .badge svg{ width:19px; height:19px; stroke:var(--blueprint-cyan); }
+  .sidebar .brand h1{ font-family:var(--mono); font-size:15px; letter-spacing:0.05em; }
+  .sidebar .brand p{ font-family:var(--mono); font-size:9px; color:var(--blueprint-cyan); letter-spacing:0.06em; text-transform:uppercase; }
+
+  .nav-group{ margin-bottom:18px; }
+  .nav-label{
+    font-family:var(--mono); font-size:9.5px; letter-spacing:0.1em; text-transform:uppercase;
+    color:rgba(234,246,248,0.4); padding:0 10px; margin-bottom:8px;
+  }
+  .nav-item{
+    display:flex; align-items:center; gap:11px;
+    padding:9px 10px; border-radius:7px;
+    font-size:13px; font-weight:500;
+    color:rgba(234,246,248,0.75);
+    cursor:pointer; margin-bottom:2px;
+    transition:background .12s ease, color .12s ease;
+    position:relative;
+  }
+  .nav-item svg{ width:16px; height:16px; flex-shrink:0; }
+  .nav-item:hover{ background:rgba(79,215,232,0.08); color:#fff; }
+  .nav-item.active{ background:rgba(79,215,232,0.16); color:#fff; }
+  .nav-item.active::before{
+    content:""; position:absolute; left:-16px; top:0; bottom:0; width:3px;
+    background:var(--blueprint-cyan); border-radius:2px;
+  }
+  .nav-item .count{
+    margin-left:auto; font-family:var(--mono); font-size:10px;
+    background:rgba(79,215,232,0.18); color:var(--blueprint-cyan);
+    padding:1px 6px; border-radius:20px;
+  }
+  .nav-item .count.urgent{ background:var(--critical); color:#fff; }
+
+  .sidebar-foot{
+    margin-top:auto; padding-top:14px; border-top:1px solid rgba(79,215,232,0.15);
+    font-family:var(--mono); font-size:9.5px; color:rgba(234,246,248,0.4); line-height:1.6;
+  }
+
+  /* MAIN */
+  .main{ display:flex; flex-direction:column; }
+
+  .topbar{
+    display:flex; align-items:center; gap:16px;
+    padding:16px 28px;
+    background:#fff;
+    border-bottom:1px solid var(--paper-line);
+  }
+  .search-box{
+    flex:1; max-width:420px;
+    display:flex; align-items:center; gap:8px;
+    background:var(--paper);
+    border:1px solid var(--paper-line);
+    border-radius:8px;
+    padding:9px 12px;
+  }
+  .search-box svg{ width:15px; height:15px; stroke:var(--ink-soft); }
+  .search-box input{ border:none; background:none; outline:none; font-size:13px; width:100%; font-family:var(--sans); }
+  .topbar-right{ margin-left:auto; display:flex; align-items:center; gap:16px; }
+  .icon-btn{
+    position:relative; width:38px; height:38px; border-radius:8px;
+    display:flex; align-items:center; justify-content:center;
+    border:1px solid var(--paper-line); background:#fff; cursor:pointer;
+  }
+  .icon-btn svg{ width:17px; height:17px; stroke:var(--ink); }
+  .icon-btn .dot{ position:absolute; top:6px; right:6px; width:7px; height:7px; border-radius:50%; background:var(--critical); border:1.5px solid #fff; }
+  .profile{ display:flex; align-items:center; gap:9px; cursor:pointer; }
+  .profile .avatar{
+    width:34px; height:34px; border-radius:50%;
+    background:var(--blueprint-navy); color:#fff;
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--mono); font-size:12px; font-weight:700;
+  }
+  .profile .name{ font-size:12.5px; font-weight:600; }
+  .profile .role{ font-family:var(--mono); font-size:9.5px; color:var(--ink-soft); }
+
+  .content{ padding:26px 28px 40px; }
+
+  .page-head{ display:flex; align-items:baseline; justify-content:space-between; margin-bottom:20px; }
+  .page-head h2{ font-family:var(--mono); font-size:18px; letter-spacing:0.02em; }
+  .page-head p{ font-size:12px; color:var(--ink-soft); font-family:var(--mono); }
+
+  /* Dashboard cards */
+  .cards{
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    gap:14px;
+    margin-bottom:24px;
+  }
+  .card{
+    background:#fff; border:1px solid var(--paper-line); border-radius:10px;
+    padding:16px 18px; position:relative; overflow:hidden;
+  }
+  .card::before{ content:""; position:absolute; top:0; left:0; width:4px; height:100%; background:var(--accent, var(--blueprint-cyan)); }
+  .card .top{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+  .card .icon-wrap{ width:32px; height:32px; border-radius:7px; background:var(--blueprint-cyan-dim); display:flex; align-items:center; justify-content:center; }
+  .card .icon-wrap svg{ width:16px; height:16px; stroke:var(--blueprint-navy); }
+  .card .num{ font-family:var(--mono); font-size:26px; font-weight:700; line-height:1; margin-bottom:4px; }
+  .card .lbl{ font-size:11.5px; color:var(--ink-soft); font-weight:500; }
+  .card.c-crit{ --accent:var(--critical); }
+  .card.c-crit .icon-wrap{ background:rgba(217,72,60,0.12); }
+  .card.c-crit .icon-wrap svg{ stroke:var(--critical); }
+  .card.c-pend{ --accent:var(--high); }
+  .card.c-pend .icon-wrap{ background:rgba(217,143,43,0.14); }
+  .card.c-pend .icon-wrap svg{ stroke:var(--high); }
+  .card.c-done{ --accent:var(--low); }
+  .card.c-done .icon-wrap{ background:rgba(47,158,91,0.12); }
+  .card.c-done .icon-wrap svg{ stroke:var(--low); }
+
+  /* two column: reports + approval */
+  .split{ display:grid; grid-template-columns:1.4fr 1fr; gap:18px; align-items:start; }
+
+  .panel{ background:#fff; border:1px solid var(--paper-line); border-radius:10px; overflow:hidden; }
+  .panel-head{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 18px; border-bottom:1px solid var(--paper-line);
+  }
+  .panel-head h3{ font-family:var(--mono); font-size:12.5px; letter-spacing:0.04em; text-transform:uppercase; display:flex; align-items:center; gap:8px; }
+  .panel-head h3 svg{ width:15px; height:15px; stroke:var(--blueprint-navy); }
+  .panel-head .link{ font-family:var(--mono); font-size:10.5px; color:var(--blueprint-navy); text-decoration:underline; cursor:pointer; }
+
+  table{ width:100%; border-collapse:collapse; }
+  thead th{
+    text-align:left; font-family:var(--mono); font-size:9.5px; letter-spacing:0.06em; text-transform:uppercase;
+    color:var(--ink-soft); padding:9px 18px; background:var(--paper); border-bottom:1px solid var(--paper-line);
+  }
+  tbody td{ padding:11px 18px; font-size:12.5px; border-bottom:1px solid var(--paper-line); }
+  tbody tr:last-child td{ border-bottom:none; }
+  .loc-cell{ display:flex; align-items:center; gap:8px; }
+  .loc-cell svg{ width:14px; height:14px; stroke:var(--ink-soft); }
+  .badge{ font-family:var(--mono); font-size:9.5px; font-weight:700; padding:3px 8px; border-radius:20px; text-transform:uppercase; letter-spacing:.03em; }
+  .badge.critical{ background:rgba(217,72,60,0.12); color:var(--critical); }
+  .badge.high{ background:rgba(217,143,43,0.14); color:var(--high); }
+  .badge.low{ background:rgba(47,158,91,0.12); color:var(--low); }
+  .badge.status{ background:var(--blueprint-cyan-dim); color:var(--blueprint-navy); }
+  .row-actions{ display:flex; gap:6px; }
+  .row-actions button{
+    border:1px solid var(--paper-line); background:#fff; border-radius:6px;
+    width:26px; height:26px; display:flex; align-items:center; justify-content:center; cursor:pointer;
+  }
+  .row-actions button svg{ width:13px; height:13px; stroke:var(--ink); }
+
+  /* approval queue */
+  .approval-list{ padding:14px 16px; display:flex; flex-direction:column; gap:12px; }
+  .approval-card{ border:1px solid var(--paper-line); border-radius:9px; padding:12px; }
+  .approval-card .head{ display:flex; align-items:center; justify-content:between; gap:8px; margin-bottom:8px; }
+  .approval-card .thumb{
+    width:100%; height:74px; border-radius:6px; margin-bottom:9px;
+    background:repeating-linear-gradient(45deg, #eee, #eee 6px, #e2e2e2 6px, #e2e2e2 12px);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .approval-card .thumb svg{ width:20px; height:20px; stroke:#b7b7b7; }
+  .approval-card .meta{ display:flex; align-items:center; justify-content:space-between; margin-bottom:9px; }
+  .approval-card .meta .loc{ font-size:12px; font-weight:600; display:flex; align-items:center; gap:6px; }
+  .approval-card .meta .loc svg{ width:13px; height:13px; stroke:var(--ink-soft); }
+  .approval-card .desc{ font-size:11.5px; color:var(--ink-soft); margin-bottom:10px; line-height:1.4; }
+  .approval-actions{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; }
+  .approval-actions button{
+    font-family:var(--mono); font-size:10px; font-weight:700; letter-spacing:.02em;
+    border-radius:6px; padding:7px 4px; border:1.5px solid; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:4px;
+    background:#fff;
+  }
+  .approval-actions button svg{ width:12px; height:12px; }
+  .btn-approve{ border-color:var(--low); color:var(--low); }
+  .btn-reject{ border-color:var(--critical); color:var(--critical); }
+  .btn-clarify{ border-color:var(--high); color:var(--high); }
+
+  .workers-strip{ padding:14px 18px; display:flex; flex-direction:column; gap:10px; }
+  .worker-row{ display:flex; align-items:center; gap:10px; }
+  .worker-row .av{ width:30px; height:30px; border-radius:50%; background:var(--blueprint-cyan-dim); display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-size:11px; font-weight:700; color:var(--blueprint-navy); }
+  .worker-row .info{ flex:1; }
+  .worker-row .info .n{ font-size:12px; font-weight:600; }
+  .worker-row .info .s{ font-family:var(--mono); font-size:9.5px; color:var(--ink-soft); }
+  .status-dot{ width:8px; height:8px; border-radius:50%; }
+  .status-dot.avail{ background:var(--low); }
+  .status-dot.busy{ background:var(--high); }
+
+  @media (max-width:1000px){
+    .app{ grid-template-columns:1fr; }
+    .sidebar{ display:none; }
+    .cards{ grid-template-columns:1fr 1fr; }
+    .split{ grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="badge"><i data-lucide="wrench"></i></div>
+      <div>
+        <h1>SmartFix</h1>
+        <p>Admin Control Panel</p>
+      </div>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-label">Overview</div>
+      <div class="nav-item active"><i data-lucide="layout-dashboard"></i>Dashboard</div>
+      <div class="nav-item"><i data-lucide="bell"></i>Notifications<span class="count urgent">3</span></div>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-label">Operations</div>
+      <div class="nav-item"><i data-lucide="clipboard-list"></i>Reports<span class="count">12</span></div>
+      <div class="nav-item"><i data-lucide="gavel"></i>Approval<span class="count urgent">4</span></div>
+      <div class="nav-item"><i data-lucide="hard-hat"></i>Workers</div>
+      <div class="nav-item"><i data-lucide="calendar-days"></i>Schedule</div>
+      <div class="nav-item"><i data-lucide="camera"></i>Repair Monitoring</div>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-label">Records</div>
+      <div class="nav-item"><i data-lucide="archive"></i>History</div>
+      <div class="nav-item"><i data-lucide="building-2"></i>Buildings &amp; Rooms</div>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-label">System</div>
+      <div class="nav-item"><i data-lucide="settings"></i>Settings</div>
+      <div class="nav-item"><i data-lucide="qr-code"></i>QR Code Link</div>
+    </div>
+
+    <div class="sidebar-foot">
+      REV A1 · GIRLSTOWN CAMPUS<br>
+      SESSION: OFFICE ADMIN
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="search-box">
+        <i data-lucide="search"></i>
+        <input type="text" placeholder="Search reports, rooms, workers…">
+      </div>
+      <div class="topbar-right">
+        <div class="icon-btn"><i data-lucide="bell"></i><span class="dot"></span></div>
+        <div class="profile">
+          <div class="avatar">OA</div>
+          <div>
+            <div class="name">Office Admin</div>
+            <div class="role">MAINTENANCE OFFICE</div>
+          </div>
+          <i data-lucide="chevron-down" style="width:14px;height:14px;stroke:var(--ink-soft);"></i>
+        </div>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="page-head">
+        <div>
+          <h2>Dashboard</h2>
+          <p>MONITORING · GIRLSTOWN CAMPUS · TODAY</p>
+        </div>
+      </div>
+
+      <div class="cards">
+        <div class="card">
+          <div class="top"><div class="icon-wrap"><i data-lucide="inbox"></i></div></div>
+          <div class="num">12</div>
+          <div class="lbl">Total Reports</div>
+        </div>
+        <div class="card c-pend">
+          <div class="top"><div class="icon-wrap"><i data-lucide="hourglass"></i></div></div>
+          <div class="num">4</div>
+          <div class="lbl">Pending Approval</div>
+        </div>
+        <div class="card">
+          <div class="top"><div class="icon-wrap"><i data-lucide="hammer"></i></div></div>
+          <div class="num">3</div>
+          <div class="lbl">In Progress</div>
+        </div>
+        <div class="card c-done">
+          <div class="top"><div class="icon-wrap"><i data-lucide="check-circle-2"></i></div></div>
+          <div class="num">5</div>
+          <div class="lbl">Completed Today</div>
+        </div>
+        <div class="card c-crit">
+          <div class="top"><div class="icon-wrap"><i data-lucide="alert-triangle"></i></div></div>
+          <div class="num">2</div>
+          <div class="lbl">High Priority</div>
+        </div>
+        <div class="card">
+          <div class="top"><div class="icon-wrap"><i data-lucide="hard-hat"></i></div></div>
+          <div class="num">6</div>
+          <div class="lbl">Available Workers</div>
+        </div>
+        <div class="card">
+          <div class="top"><div class="icon-wrap"><i data-lucide="calendar-clock"></i></div></div>
+          <div class="num">3</div>
+          <div class="lbl">Today's Schedule</div>
+        </div>
+        <div class="card">
+          <div class="top"><div class="icon-wrap"><i data-lucide="building-2"></i></div></div>
+          <div class="num">5</div>
+          <div class="lbl">Buildings Tracked</div>
+        </div>
+      </div>
+
+      <div class="split">
+        <!-- Reports table -->
+        <div class="panel">
+          <div class="panel-head">
+            <h3><i data-lucide="clipboard-list"></i> Recent Reports</h3>
+            <span class="link">View all</span>
+          </div>
+          <table>
+            <thead>
+              <tr><th>Location</th><th>Category</th><th>Urgency</th><th>Status</th><th></th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><div class="loc-cell"><i data-lucide="map-pin"></i>DOTY · Rm 302</div></td>
+                <td>Electrical</td>
+                <td><span class="badge critical">Critical</span></td>
+                <td><span class="badge status">Waiting Approval</span></td>
+                <td><div class="row-actions"><button><i data-lucide="eye"></i></button><button><i data-lucide="send"></i></button></div></td>
+              </tr>
+              <tr>
+                <td><div class="loc-cell"><i data-lucide="map-pin"></i>Main Bldg · Rm 205</div></td>
+                <td>Furniture</td>
+                <td><span class="badge low">Low</span></td>
+                <td><span class="badge status">Scheduled</span></td>
+                <td><div class="row-actions"><button><i data-lucide="eye"></i></button><button><i data-lucide="send"></i></button></div></td>
+              </tr>
+              <tr>
+                <td><div class="loc-cell"><i data-lucide="map-pin"></i>Dormitory · Rm 4</div></td>
+                <td>Plumbing</td>
+                <td><span class="badge high">High</span></td>
+                <td><span class="badge status">In Progress</span></td>
+                <td><div class="row-actions"><button><i data-lucide="eye"></i></button><button><i data-lucide="send"></i></button></div></td>
+              </tr>
+              <tr>
+                <td><div class="loc-cell"><i data-lucide="map-pin"></i>Gymnasium · Rm A</div></td>
+                <td>HVAC</td>
+                <td><span class="badge high">High</span></td>
+                <td><span class="badge status">Assigned</span></td>
+                <td><div class="row-actions"><button><i data-lucide="eye"></i></button><button><i data-lucide="send"></i></button></div></td>
+              </tr>
+              <tr>
+                <td><div class="loc-cell"><i data-lucide="map-pin"></i>Chapel · Entrance</div></td>
+                <td>Structural</td>
+                <td><span class="badge low">Low</span></td>
+                <td><span class="badge status">Completed</span></td>
+                <td><div class="row-actions"><button><i data-lucide="eye"></i></button><button><i data-lucide="send"></i></button></div></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- right column -->
+        <div style="display:flex; flex-direction:column; gap:18px;">
+          <div class="panel">
+            <div class="panel-head">
+              <h3><i data-lucide="gavel"></i> Awaiting Sr. Maureen</h3>
+              <span class="link">4 pending</span>
+            </div>
+            <div class="approval-list">
+              <div class="approval-card">
+                <div class="thumb"><i data-lucide="image"></i></div>
+                <div class="meta">
+                  <div class="loc"><i data-lucide="map-pin"></i>DOTY · Rm 302</div>
+                  <span class="badge critical">Critical</span>
+                </div>
+                <div class="desc">Exposed wiring sparking near ceiling fan — reported by teacher.</div>
+                <div class="approval-actions">
+                  <button class="btn-approve"><i data-lucide="check"></i>Approve</button>
+                  <button class="btn-reject"><i data-lucide="x"></i>Reject</button>
+                  <button class="btn-clarify"><i data-lucide="message-circle-question"></i>Ask</button>
+                </div>
+              </div>
+              <div class="approval-card">
+                <div class="thumb"><i data-lucide="image"></i></div>
+                <div class="meta">
+                  <div class="loc"><i data-lucide="map-pin"></i>Dormitory · Rm 4</div>
+                  <span class="badge high">High</span>
+                </div>
+                <div class="desc">Leaking pipe under sink, water pooling on floor.</div>
+                <div class="approval-actions">
+                  <button class="btn-approve"><i data-lucide="check"></i>Approve</button>
+                  <button class="btn-reject"><i data-lucide="x"></i>Reject</button>
+                  <button class="btn-clarify"><i data-lucide="message-circle-question"></i>Ask</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <h3><i data-lucide="hard-hat"></i> Worker Availability</h3>
+              <span class="link">Manage</span>
+            </div>
+            <div class="workers-strip">
+              <div class="worker-row">
+                <div class="av">JM</div>
+                <div class="info"><div class="n">Jun Mendoza</div><div class="s">Electrical</div></div>
+                <div class="status-dot avail"></div>
+              </div>
+              <div class="worker-row">
+                <div class="av">RC</div>
+                <div class="info"><div class="n">Rey Cruz</div><div class="s">Plumbing</div></div>
+                <div class="status-dot busy"></div>
+              </div>
+              <div class="worker-row">
+                <div class="av">AL</div>
+                <div class="info"><div class="n">Ana Lopez</div><div class="s">General / Furniture</div></div>
+                <div class="status-dot avail"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>lucide.createIcons();</script>
+</body>
+</html>
