@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartFix — Worker App</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lucide-static/0.462.0/umd/lucide.min.js"></script>
+<style>
+  :root{
+    --blueprint-navy:#0a2e52;
+    --blueprint-navy-deep:#071f3a;
+    --blueprint-cyan:#4fd7e8;
+    --blueprint-cyan-dim: rgba(79,215,232,0.16);
+    --paper:#f6f4ec;
+    --paper-line:#e1dcc9;
+    --ink:#0a2e52;
+    --ink-soft:#5b6b7d;
+    --critical:#d9483c;
+    --high:#d98f2b;
+    --low:#2f9e5b;
+    --mono: 'IBM Plex Mono', 'Courier New', monospace;
+    --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap');
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:var(--sans);
+    background:
+      repeating-linear-gradient(0deg, rgba(79,215,232,0.07) 0px, transparent 1px, transparent 28px, rgba(79,215,232,0.07) 28px),
+      repeating-linear-gradient(90deg, rgba(79,215,232,0.07) 0px, transparent 1px, transparent 28px, rgba(79,215,232,0.07) 28px),
+      var(--blueprint-navy);
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    padding:36px 16px;
+  }
+
+  .phone{
+    width:390px;
+    max-width:100%;
+    background:var(--paper);
+    border-radius:28px;
+    box-shadow:0 40px 80px -30px rgba(0,0,0,0.6), 0 0 0 1px rgba(79,215,232,0.3);
+    overflow:hidden;
+    position:relative;
+  }
+
+  /* status/top */
+  .topbar{
+    background:var(--blueprint-navy);
+    color:#fff;
+    padding:18px 18px 20px;
+  }
+  .topbar .greet-row{ display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .topbar .who{ display:flex; align-items:center; gap:10px; }
+  .topbar .who .av{
+    width:38px; height:38px; border-radius:50%;
+    background:rgba(79,215,232,0.18); border:1.5px solid var(--blueprint-cyan);
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--mono); font-weight:700; font-size:13px; color:var(--blueprint-cyan);
+  }
+  .topbar .who .t{ font-family:var(--mono); font-size:9.5px; letter-spacing:.08em; color:rgba(234,246,248,0.55); text-transform:uppercase; }
+  .topbar .who .n{ font-size:14px; font-weight:700; }
+  .status-toggle{
+    display:flex; align-items:center; gap:5px;
+    background:rgba(47,158,91,0.18); border:1px solid var(--low);
+    padding:5px 10px; border-radius:20px;
+    font-family:var(--mono); font-size:9.5px; font-weight:700; color:var(--low); text-transform:uppercase;
+  }
+  .status-toggle .d{ width:6px; height:6px; border-radius:50%; background:var(--low); }
+
+  .stat-strip{ display:flex; gap:8px; }
+  .mini-stat{
+    flex:1; background:rgba(255,255,255,0.06); border:1px solid rgba(79,215,232,0.25);
+    border-radius:9px; padding:9px 8px; text-align:center;
+  }
+  .mini-stat .n{ font-family:var(--mono); font-size:17px; font-weight:700; }
+  .mini-stat .l{ font-family:var(--mono); font-size:8px; letter-spacing:.05em; color:rgba(234,246,248,0.55); text-transform:uppercase; margin-top:2px; }
+
+  /* body scroll */
+  .body-scroll{ padding:18px 16px 90px; max-height:640px; overflow-y:auto; }
+
+  .sect-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .sect-head h3{ font-family:var(--mono); font-size:12px; letter-spacing:.05em; text-transform:uppercase; display:flex; align-items:center; gap:7px; }
+  .sect-head h3 svg{ width:15px; height:15px; stroke:var(--blueprint-navy); }
+  .sect-head .tag{ font-family:var(--mono); font-size:9.5px; color:var(--ink-soft); }
+
+  .task-card{
+    background:#fff; border:1px solid var(--paper-line); border-radius:12px;
+    padding:14px; margin-bottom:12px; position:relative; overflow:hidden;
+  }
+  .task-card::before{ content:""; position:absolute; top:0; left:0; width:4px; height:100%; background:var(--u, var(--blueprint-cyan)); }
+  .task-card.urgent{ --u:var(--critical); }
+  .task-card.pending{ --u:var(--high); }
+  .task-card.done{ --u:var(--low); }
+
+  .task-top{ display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+  .task-badge{ font-family:var(--mono); font-size:9px; font-weight:700; text-transform:uppercase; padding:3px 8px; border-radius:20px; display:flex; align-items:center; gap:4px; }
+  .task-badge svg{ width:11px; height:11px; }
+  .task-badge.urgent{ background:rgba(217,72,60,0.12); color:var(--critical); }
+  .task-badge.pending{ background:rgba(217,143,43,0.14); color:var(--high); }
+  .task-badge.done{ background:rgba(47,158,91,0.12); color:var(--low); }
+  .task-time{ font-family:var(--mono); font-size:10px; color:var(--ink-soft); display:flex; align-items:center; gap:4px; }
+  .task-time svg{ width:11px; height:11px; }
+
+  .task-loc{ display:flex; align-items:center; gap:6px; font-size:13px; font-weight:700; margin-bottom:4px; }
+  .task-loc svg{ width:14px; height:14px; stroke:var(--blueprint-navy); }
+  .task-issue{ font-size:12px; color:var(--ink-soft); margin-bottom:12px; display:flex; align-items:center; gap:6px; }
+  .task-issue svg{ width:12px; height:12px; flex-shrink:0; }
+
+  .task-actions{ display:flex; gap:8px; }
+  .task-actions button{
+    flex:1; font-family:var(--mono); font-size:10.5px; font-weight:700; letter-spacing:.02em;
+    padding:9px; border-radius:8px; border:1.5px solid var(--blueprint-navy); cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:5px; text-transform:uppercase;
+  }
+  .task-actions button svg{ width:12px; height:12px; }
+  .btn-outline{ background:#fff; color:var(--blueprint-navy); }
+  .btn-solid{ background:var(--blueprint-navy); color:#fff; }
+
+  /* repair work detail */
+  .detail-card{ background:#fff; border:1px solid var(--paper-line); border-radius:12px; padding:14px; margin-bottom:16px; }
+  .photo-pair{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px; }
+  .photo-box{
+    aspect-ratio:1/1; border-radius:9px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
+  }
+  .photo-box.before{ background:repeating-linear-gradient(45deg, #eee, #eee 6px, #e4e4e4 6px, #e4e4e4 12px); }
+  .photo-box.after{ background:var(--blueprint-cyan-dim); border:2px dashed var(--blueprint-cyan); }
+  .photo-box svg{ width:18px; height:18px; stroke:var(--ink-soft); }
+  .photo-box .lab{ font-family:var(--mono); font-size:9px; text-transform:uppercase; color:var(--ink-soft); letter-spacing:.05em; }
+
+  .note-box textarea{
+    width:100%; min-height:60px; border:1.5px solid var(--paper-line); border-radius:8px;
+    padding:10px; font-family:var(--sans); font-size:12.5px; resize:vertical; outline:none;
+  }
+  .note-box textarea:focus{ border-color:var(--blueprint-navy); }
+  .note-label{ font-family:var(--mono); font-size:10.5px; text-transform:uppercase; letter-spacing:.04em; margin-bottom:7px; display:flex; align-items:center; gap:6px; }
+  .note-label svg{ width:13px; height:13px; stroke:var(--blueprint-navy); }
+
+  .complete-btn{
+    width:100%; margin-top:14px;
+    background:linear-gradient(135deg, var(--low), #22824a);
+    color:#fff; border:none; border-radius:9px; padding:13px;
+    font-family:var(--mono); font-weight:700; font-size:12px; letter-spacing:.06em; text-transform:uppercase;
+    display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer;
+  }
+  .complete-btn svg{ width:15px; height:15px; }
+
+  /* bottom nav */
+  .bottom-nav{
+    position:absolute; bottom:0; left:0; right:0;
+    background:#fff; border-top:1px solid var(--paper-line);
+    display:flex; justify-content:space-around; padding:10px 6px 14px;
+  }
+  .nav-btn{ display:flex; flex-direction:column; align-items:center; gap:3px; color:var(--ink-soft); cursor:pointer; }
+  .nav-btn svg{ width:19px; height:19px; }
+  .nav-btn span{ font-family:var(--mono); font-size:8.5px; letter-spacing:.03em; text-transform:uppercase; }
+  .nav-btn.active{ color:var(--blueprint-navy); }
+  .nav-btn.active svg{ stroke:var(--blueprint-navy); }
+
+  .divider-label{
+    font-family:var(--mono); font-size:9.5px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.08em;
+    display:flex; align-items:center; gap:10px; margin:20px 0 12px;
+  }
+  .divider-label::before, .divider-label::after{ content:""; flex:1; height:1px; background:var(--paper-line); }
+</style>
+</head>
+<body>
+
+<div class="phone">
+
+  <div class="topbar">
+    <div class="greet-row">
+      <div class="who">
+        <div class="av">JM</div>
+        <div>
+          <div class="t">Good Morning</div>
+          <div class="n">Jun Mendoza</div>
+        </div>
+      </div>
+      <div class="status-toggle"><span class="d"></span>Online</div>
+    </div>
+    <div class="stat-strip">
+      <div class="mini-stat"><div class="n">3</div><div class="l">Assigned</div></div>
+      <div class="mini-stat"><div class="n">1</div><div class="l">Urgent</div></div>
+      <div class="mini-stat"><div class="n">5</div><div class="l">Done</div></div>
+    </div>
+  </div>
+
+  <div class="body-scroll">
+
+    <div class="sect-head">
+      <h3><i data-lucide="clipboard-list"></i>My Tasks</h3>
+      <span class="tag">3 assigned</span>
+    </div>
+
+    <div class="task-card urgent">
+      <div class="task-top">
+        <span class="task-badge urgent"><i data-lucide="flame"></i>Critical</span>
+        <span class="task-time"><i data-lucide="clock"></i>9:30 AM</span>
+      </div>
+      <div class="task-loc"><i data-lucide="map-pin"></i>DOTY Building · Room 302</div>
+      <div class="task-issue"><i data-lucide="zap"></i>Exposed wiring near ceiling fan</div>
+      <div class="task-actions">
+        <button class="btn-outline"><i data-lucide="eye"></i>Details</button>
+        <button class="btn-solid"><i data-lucide="play"></i>Start Repair</button>
+      </div>
+    </div>
+
+    <div class="task-card pending">
+      <div class="task-top">
+        <span class="task-badge pending"><i data-lucide="triangle-alert"></i>High</span>
+        <span class="task-time"><i data-lucide="clock"></i>1:00 PM</span>
+      </div>
+      <div class="task-loc"><i data-lucide="map-pin"></i>Dormitory · Room 4</div>
+      <div class="task-issue"><i data-lucide="droplets"></i>Leaking pipe under sink</div>
+      <div class="task-actions">
+        <button class="btn-outline"><i data-lucide="eye"></i>Details</button>
+        <button class="btn-solid"><i data-lucide="check"></i>Accept</button>
+      </div>
+    </div>
+
+    <div class="task-card done">
+      <div class="task-top">
+        <span class="task-badge done"><i data-lucide="check-circle-2"></i>Completed</span>
+        <span class="task-time"><i data-lucide="clock"></i>Yesterday</span>
+      </div>
+      <div class="task-loc"><i data-lucide="map-pin"></i>Chapel · Entrance</div>
+      <div class="task-issue"><i data-lucide="hammer"></i>Loose floor tile repaired</div>
+    </div>
+
+    <div class="divider-label">Active Repair — Room 302</div>
+
+    <div class="detail-card">
+      <div class="note-label"><i data-lucide="camera"></i>Photo Documentation</div>
+      <div class="photo-pair">
+        <div class="photo-box before">
+          <i data-lucide="image"></i>
+          <span class="lab">Before</span>
+        </div>
+        <div class="photo-box after">
+          <i data-lucide="camera-plus"></i>
+          <span class="lab">Add After Photo</span>
+        </div>
+      </div>
+
+      <div class="note-box">
+        <div class="note-label"><i data-lucide="file-edit"></i>Repair Notes</div>
+        <textarea placeholder="e.g. Rewired ceiling fan connection, replaced burnt outlet, tested for safety."></textarea>
+      </div>
+
+      <button class="complete-btn"><i data-lucide="badge-check"></i>Mark as Completed</button>
+    </div>
+
+  </div>
+
+  <div class="bottom-nav">
+    <div class="nav-btn active"><i data-lucide="home"></i><span>Home</span></div>
+    <div class="nav-btn"><i data-lucide="clipboard-list"></i><span>Tasks</span></div>
+    <div class="nav-btn"><i data-lucide="calendar-days"></i><span>Schedule</span></div>
+    <div class="nav-btn"><i data-lucide="archive"></i><span>History</span></div>
+    <div class="nav-btn"><i data-lucide="user"></i><span>Profile</span></div>
+  </div>
+
+</div>
+
+<script>lucide.createIcons();</script>
+</body>
+</html>
