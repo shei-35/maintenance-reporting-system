@@ -266,7 +266,11 @@
 
 
 <script>
-lucide.createIcons();
+
+if (typeof lucide !== 'undefined') {
+  lucide.createIcons();
+}
+
 
 document.querySelectorAll('.btn-solid').forEach(btn => {
   btn.addEventListener('click', function() {
