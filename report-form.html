@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartFix — Maintenance Work Order</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lucide-static/0.462.0/umd/lucide.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root{
+    --blueprint-navy:#0a2e52;
+    --blueprint-navy-deep:#071f3a;
+    --blueprint-cyan:#4fd7e8;
+    --blueprint-cyan-dim: rgba(79,215,232,0.18);
+    --paper:#f6f4ec;
+    --paper-line:#dcd6c2;
+    --ink:#0a2e52;
+    --ink-soft:#5b6b7d;
+    --critical:#d9483c;
+    --high:#d98f2b;
+    --low:#2f9e5b;
+    --mono: 'IBM Plex Mono', 'Courier New', monospace;
+    --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap');
+
+  *{box-sizing:border-box; margin:0; padding:0;}
+
+  body{
+    font-family:var(--sans);
+    background:
+      radial-gradient(circle at 15% 10%, rgba(79,215,232,0.10), transparent 40%),
+      radial-gradient(circle at 90% 85%, rgba(79,215,232,0.08), transparent 45%),
+      repeating-linear-gradient(0deg, var(--blueprint-cyan-dim) 0px, transparent 1px, transparent 32px, var(--blueprint-cyan-dim) 32px),
+      repeating-linear-gradient(90deg, var(--blueprint-cyan-dim) 0px, transparent 1px, transparent 32px, var(--blueprint-cyan-dim) 32px),
+      var(--blueprint-navy);
+    min-height:100vh;
+    padding:48px 20px 80px;
+    color:var(--ink);
+    position:relative;
+    overflow-x:hidden;
+  }
+
+  /* faint schematic floor-plan lines behind everything */
+  body::before{
+    content:"";
+    position:fixed; inset:0;
+    background-image:
+      linear-gradient(var(--blueprint-cyan-dim) 1px, transparent 1px),
+      linear-gradient(90deg, var(--blueprint-cyan-dim) 1px, transparent 1px);
+    background-size:160px 160px;
+    opacity:.35;
+    pointer-events:none;
+  }
+
+  .schematic-corner{
+    position:fixed;
+    width:220px; height:220px;
+    border:1.5px dashed rgba(79,215,232,0.35);
+    pointer-events:none;
+  }
+  .schematic-corner.tl{ top:24px; left:24px; border-right:none; border-bottom:none;}
+  .schematic-corner.br{ bottom:24px; right:24px; border-left:none; border-top:none;}
+
+  .wrap{
+    max-width:640px;
+    margin:0 auto;
+    position:relative;
+    z-index:1;
+  }
+
+  /* Header block — like a blueprint title stamp */
+  .masthead{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    color:#eaf6f8;
+    margin-bottom:22px;
+    padding-bottom:16px;
+    border-bottom:1px solid rgba(79,215,232,0.3);
+  }
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:12px;
+  }
+  .brand .logo-badge{
+    width:44px; height:44px;
+    border:2px solid var(--blueprint-cyan);
+    border-radius:8px;
+    display:flex; align-items:center; justify-content:center;
+    background:rgba(79,215,232,0.08);
+    flex-shrink:0;
+  }
+  .brand .logo-badge svg{ width:24px; height:24px; stroke:var(--blueprint-cyan); }
+  .brand h1{
+    font-family:var(--mono);
+    font-size:20px;
+    letter-spacing:0.06em;
+    font-weight:700;
+    color:#fff;
+  }
+  .brand p{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:0.08em;
+    color:var(--blueprint-cyan);
+    text-transform:uppercase;
+    margin-top:2px;
+  }
+  .masthead .qr-tag{
+    text-align:right;
+    font-family:var(--mono);
+    font-size:10px;
+    color:rgba(234,246,248,0.65);
+    line-height:1.5;
+  }
+  .masthead .qr-tag .qr-icon{
+    display:inline-flex;
+    padding:5px;
+    background:#fff;
+    border:1px solid rgba(79,215,232,0.4);
+    border-radius:6px;
+    margin-bottom:4px;
+    line-height:0;
+  }
+  .masthead .qr-tag .qr-icon img{ display:block; width:56px; height:56px; }
+  .masthead .qr-tag svg{ width:18px; height:18px; stroke:var(--blueprint-cyan); }
+
+  /* The paper work-order card */
+  .sheet{
+    background:var(--paper);
+    border-radius:4px;
+    box-shadow:0 30px 60px -20px rgba(0,0,0,0.55), 0 0 0 1px rgba(79,215,232,0.25);
+    position:relative;
+  }
+  .sheet::before{
+    content:"";
+    position:absolute;
+    inset:10px;
+    border:1px solid var(--blueprint-navy);
+    opacity:0.12;
+    pointer-events:none;
+    border-radius:2px;
+  }
+  .sheet-tear{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:14px 26px;
+    background:var(--blueprint-navy);
+    color:#fff;
+    border-radius:4px 4px 0 0;
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:0.06em;
+  }
+  .sheet-tear span.dot{
+    display:inline-block; width:6px; height:6px; border-radius:50%;
+    background:var(--blueprint-cyan); margin-right:6px;
+  }
+
+  .sheet-inner{ padding:30px 30px 34px; }
+
+  .lead{
+    text-align:center;
+    margin-bottom:28px;
+  }
+  .lead h2{
+    font-family:var(--mono);
+    font-size:15px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--ink);
+    margin-bottom:6px;
+  }
+  .lead p{
+    font-size:13px;
+    color:var(--ink-soft);
+  }
+
+  .field-group{ margin-bottom:22px; }
+  .field-label{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-family:var(--mono);
+    font-size:11.5px;
+    font-weight:600;
+    letter-spacing:0.04em;
+    text-transform:uppercase;
+    color:var(--ink);
+    margin-bottom:9px;
+  }
+  .field-label svg{ width:15px; height:15px; stroke:var(--blueprint-navy); flex-shrink:0; }
+  .field-label .req{ color:var(--critical); }
+
+  .row-2{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .row-3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; }
+
+  input[type="text"], select, textarea{
+    width:100%;
+    font-family:var(--sans);
+    font-size:14px;
+    padding:12px 14px;
+    border:1.5px solid var(--paper-line);
+    border-radius:6px;
+    background:#fff;
+    color:var(--ink);
+    outline:none;
+    transition:border-color .15s ease, box-shadow .15s ease;
+  }
+  input[type="text"]:focus, select:focus, textarea:focus{
+    border-color:var(--blueprint-navy);
+    box-shadow:0 0 0 3px rgba(10,46,82,0.10);
+  }
+  textarea{ resize:vertical; min-height:86px; }
+  select{ appearance:none; -webkit-appearance:none; background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%230a2e52' stroke-width='2'><polyline points='6 9 12 15 18 9'/></svg>"); background-repeat:no-repeat; background-position:right 12px center; padding-right:36px; }
+
+  /* Upload dropzone */
+  .dropzone{
+    border:2px dashed var(--paper-line);
+    border-radius:8px;
+    padding:26px 16px;
+    text-align:center;
+    background:repeating-linear-gradient(45deg, rgba(10,46,82,0.02) 0px, rgba(10,46,82,0.02) 8px, transparent 8px, transparent 16px);
+    cursor:pointer;
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .dropzone:hover{ border-color:var(--blueprint-navy); }
+  .dropzone .icon-circle{
+    width:44px; height:44px;
+    border-radius:50%;
+    background:var(--blueprint-cyan-dim);
+    display:flex; align-items:center; justify-content:center;
+    margin:0 auto 10px;
+  }
+  .dropzone .icon-circle svg{ width:20px; height:20px; stroke:var(--blueprint-navy); }
+  .dropzone p.main{ font-size:13.5px; font-weight:600; color:var(--ink); margin-bottom:2px; }
+  .dropzone p.sub{ font-size:11px; color:var(--ink-soft); font-family:var(--mono); }
+
+  /* Urgency stamps */
+  .urgency-row{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+  .stamp{
+    position:relative;
+    border:2px solid;
+    border-radius:8px;
+    padding:14px 8px;
+    text-align:center;
+    cursor:pointer;
+    font-family:var(--mono);
+    font-weight:700;
+    font-size:12px;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    background:#fff;
+    transition:transform .12s ease, box-shadow .12s ease;
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+  }
+  .stamp svg{ width:18px; height:18px; }
+  .stamp:hover{ transform:translateY(-2px); }
+  .stamp.critical{ border-color:var(--critical); color:var(--critical); }
+  .stamp.high{ border-color:var(--high); color:var(--high); }
+  .stamp.low{ border-color:var(--low); color:var(--low); }
+  .stamp.selected.critical{ background:var(--critical); color:#fff; box-shadow:0 6px 16px -4px rgba(217,72,60,0.5);}
+  .stamp.selected.high{ background:var(--high); color:#fff; box-shadow:0 6px 16px -4px rgba(217,143,43,0.5);}
+  .stamp.selected.low{ background:var(--low); color:#fff; box-shadow:0 6px 16px -4px rgba(47,158,91,0.5);}
+  .stamp.selected svg{ stroke:#fff; }
+
+  .hint-row{
+    display:flex; align-items:flex-start; gap:8px;
+    background:var(--blueprint-cyan-dim);
+    border-radius:6px;
+    padding:10px 12px;
+    margin-bottom:24px;
+  }
+  .hint-row svg{ width:15px; height:15px; stroke:var(--blueprint-navy); flex-shrink:0; margin-top:1px; }
+  .hint-row p{ font-size:11.5px; color:var(--ink-soft); line-height:1.5; }
+
+  .submit-btn{
+    width:100%;
+    background:linear-gradient(135deg, var(--blueprint-navy), #14497f);
+    color:#fff;
+    border:none;
+    border-radius:8px;
+    padding:15px;
+    font-family:var(--mono);
+    font-size:13.5px;
+    font-weight:700;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    cursor:pointer;
+    transition:filter .15s ease, transform .1s ease;
+  }
+  .submit-btn:hover{ filter:brightness(1.12); }
+  .submit-btn:active{ transform:scale(0.99); }
+  .submit-btn svg{ width:17px; height:17px; }
+
+  /* Title block footer — like real blueprint drawing tables */
+  .title-block{
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    border-top:1px solid var(--paper-line);
+    margin-top:26px;
+  }
+  .title-block .cell{
+    padding:12px 14px;
+    border-right:1px solid var(--paper-line);
+  }
+  .title-block .cell:last-child{ border-right:none; }
+  .title-block .cell .k{
+    font-family:var(--mono);
+    font-size:9px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    margin-bottom:4px;
+  }
+  .title-block .cell .v{
+    font-family:var(--mono);
+    font-size:12px;
+    font-weight:600;
+    color:var(--ink);
+  }
+
+  .stakeholder-strip{
+    max-width:640px;
+    margin:26px auto 0;
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .stakeholder{
+    flex:1 1 auto;
+    min-width:130px;
+    background:rgba(255,255,255,0.05);
+    border:1px solid rgba(79,215,232,0.25);
+    border-radius:8px;
+    padding:12px 14px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .stakeholder svg{ width:17px; height:17px; stroke:var(--blueprint-cyan); flex-shrink:0; }
+  .stakeholder .t{ font-family:var(--mono); font-size:9.5px; letter-spacing:0.05em; color:rgba(234,246,248,0.55); text-transform:uppercase; }
+  .stakeholder .n{ font-family:var(--mono); font-size:11.5px; color:#eaf6f8; font-weight:600; }
+
+  @media (max-width:560px){
+    .row-2, .row-3{ grid-template-columns:1fr; }
+    .urgency-row{ grid-template-columns:1fr; }
+    .title-block{ grid-template-columns:1fr 1fr; }
+    .title-block .cell:nth-child(2){ border-right:none; }
+    .schematic-corner{ display:none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="schematic-corner tl"></div>
+<div class="schematic-corner br"></div>
+
+<div class="wrap">
+
+  <div class="masthead">
+    <div class="brand">
+      <div class="logo-badge"><i data-lucide="wrench"></i></div>
+      <div>
+        <h1>SmartFix</h1>
+        <p>School Maintenance Reporting System</p>
+      </div>
+    </div>
+    <div class="qr-tag">
+      <div class="qr-icon" id="qr-canvas"></div><br>
+      Scan &amp; Report Anywhere
+    </div>
+  </div>
+
+  <form class="sheet" onsubmit="return false;">
+    <div class="sheet-tear">
+      <span><span class="dot"></span>WORK ORDER — DAMAGE REPORT</span>
+      <span id="ticket-id">#SF-0000</span>
+    </div>
+
+    <div class="sheet-inner">
+      <div class="lead">
+        <h2>Report a Maintenance Issue</h2>
+        <p>Fill in every field below — the more detail you give, the faster it gets fixed.</p>
+      </div>
+
+      <!-- Photo upload -->
+      <div class="field-group">
+        <label class="field-label"><i data-lucide="camera"></i> Damage Photo <span class="req">*</span></label>
+        <label class="dropzone">
+          <div class="icon-circle"><i data-lucide="image-plus"></i></div>
+          <p class="main">Tap to upload or take a photo</p>
+          <p class="sub">JPG · PNG · camera allowed</p>
+          <input type="file" accept="image/*" style="display:none">
+        </label>
+      </div>
+
+      <!-- Location -->
+      <div class="field-group">
+        <label class="field-label"><i data-lucide="map-pin"></i> Location <span class="req">*</span></label>
+        <div class="row-3">
+          <div>
+            <select>
+              <option>Main Building</option>
+              <option>DOTY Building</option>
+              <option>Gymnasium</option>
+              <option>Dormitory</option>
+              <option>Chapel</option>
+            </select>
+          </div>
+          <div>
+            <select>
+              <option>Ground Floor</option>
+              <option>2nd Floor</option>
+              <option>3rd Floor</option>
+              <option>Rooftop</option>
+            </select>
+          </div>
+          <div>
+            <input type="text" placeholder="Room no.">
+          </div>
+        </div>
+      </div>
+
+      <!-- Damage category -->
+      <div class="field-group">
+        <label class="field-label"><i data-lucide="list-checks"></i> Damage Category <span class="req">*</span></label>
+        <select style="margin-bottom:10px;">
+          <option>Electrical</option>
+          <option>Plumbing</option>
+          <option>Furniture</option>
+          <option>Structural</option>
+          <option>HVAC / Ventilation</option>
+          <option>Other</option>
+        </select>
+        <input type="text" placeholder="If &quot;Other&quot;, describe the category">
+      </div>
+
+      <!-- Description -->
+      <div class="field-group">
+        <label class="field-label"><i data-lucide="file-edit"></i> What needs repair? <span class="req">*</span></label>
+        <textarea placeholder="e.g. Broken ceiling light flickering and sparking near the whiteboard"></textarea>
+      </div>
+
+      <!-- Urgency -->
+      <div class="field-group">
+        <label class="field-label"><i data-lucide="alert-triangle"></i> Urgency Level <span class="req">*</span></label>
+        <div class="urgency-row">
+          <div class="stamp critical" onclick="selectUrgency(this)"><i data-lucide="flame"></i>Critical</div>
+          <div class="stamp high" onclick="selectUrgency(this)"><i data-lucide="triangle-alert"></i>High</div>
+          <div class="stamp low" onclick="selectUrgency(this)"><i data-lucide="leaf"></i>Low</div>
+        </div>
+      </div>
+
+      <!-- Reported by -->
+      <div class="field-group">
+        <label class="field-label"><i data-lucide="user"></i> Reported By</label>
+        <div class="row-2">
+          <input type="text" placeholder="Full name">
+          <select>
+            <option>Student</option>
+            <option>Teacher</option>
+            <option>Sister</option>
+            <option>School Staff</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="hint-row">
+        <i data-lucide="shield-check"></i>
+        <p>Your report goes straight to the Maintenance Office, then to Sr. Maureen for approval before a worker is assigned — you'll get a notification at every step.</p>
+      </div>
+
+      <button class="submit-btn" type="submit">
+        <i data-lucide="send"></i> Submit Report
+      </button>
+
+      <div class="title-block">
+        <div class="cell">
+          <div class="k">Status</div>
+          <div class="v">Draft</div>
+        </div>
+        <div class="cell">
+          <div class="k">Date</div>
+          <div class="v" id="today"></div>
+        </div>
+        <div class="cell">
+          <div class="k">Routed To</div>
+          <div class="v">Office Admin</div>
+        </div>
+        <div class="cell">
+          <div class="k">Rev</div>
+          <div class="v">A1</div>
+        </div>
+      </div>
+    </div>
+  </form>
+
+  <div class="stakeholder-strip">
+    <div class="stakeholder"><i data-lucide="clipboard-list"></i><div><div class="t">Next</div><div class="n">Office Admin Review</div></div></div>
+    <div class="stakeholder"><i data-lucide="gavel"></i><div><div class="t">Then</div><div class="n">Sr. Maureen Approval</div></div></div>
+    <div class="stakeholder"><i data-lucide="hard-hat"></i><div><div class="t">Finally</div><div class="n">Worker Repair</div></div></div>
+  </div>
+
+</div>
+
+<script>
+  lucide.createIcons();
+
+  new QRCode(document.getElementById("qr-canvas"), {
+    text: "https://sms-girlstownreportsubmission.netlify.app/",
+    width: 56,
+    height: 56,
+    colorDark: "#0a2e52",
+    colorLight: "#ffffff",
+    correctLevel: QRCode.CorrectLevel.M
+  });
+
+  function selectUrgency(el){
+    document.querySelectorAll('.stamp').forEach(s => s.classList.remove('selected'));
+    el.classList.add('selected');
+  }
+
+  document.getElementById('today').textContent = new Date().toLocaleDateString('en-US', { month:'short', day:'2-digit', year:'numeric' });
+  document.getElementById('ticket-id').textContent = '#SF-' + Math.floor(1000 + Math.random()*9000);
+</script>
+
+</body>
+</html>
